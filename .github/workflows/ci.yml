@@ -13,7 +13,7 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 10.0.x
@@ -30,7 +30,7 @@ jobs:
   terraform-validate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: hashicorp/setup-terraform@v3
       - run: terraform fmt -check -recursive infra
       - working-directory: infra/main
