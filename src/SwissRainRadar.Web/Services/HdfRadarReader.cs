@@ -1,5 +1,6 @@
 using PureHDF;
 using SwissRainRadar.Web.Models;
+using System.Globalization;
 
 namespace SwissRainRadar.Web.Services;
 
@@ -20,7 +21,35 @@ public sealed class HdfRadarReader
 
             using var file = H5File.OpenRead(temporaryPath);
             var dataset = file.Dataset("/dataset1/data1/data");
-            values = dataset.Read<float[]>();
+
+            static bool TryReadGeneric<T>(PureHDF.IH5Dataset dataset, out float[] result)
+            {
+                try
+                {
+                    var arr = dataset.Read<T[]>();
+                    result = Array.ConvertAll(arr, item => Convert.ToSingle(item, CultureInfo.InvariantCulture));
+                    return true;
+                }
+                catch
+                {
+                    result = null!;
+                    return false;
+                }
+            }
+
+            if (!TryReadGeneric<float>(dataset, out values)
+                && !TryReadGeneric<double>(dataset, out values)
+                && !TryReadGeneric<int>(dataset, out values)
+                && !TryReadGeneric<uint>(dataset, out values)
+                && !TryReadGeneric<short>(dataset, out values)
+                && !TryReadGeneric<ushort>(dataset, out values)
+                && !TryReadGeneric<byte>(dataset, out values)
+                && !TryReadGeneric<sbyte>(dataset, out values)
+                && !TryReadGeneric<long>(dataset, out values)
+                && !TryReadGeneric<ulong>(dataset, out values))
+            {
+                throw new InvalidDataException("Unable to read dataset as a supported numeric type.");
+            }
         }
         finally
         {
