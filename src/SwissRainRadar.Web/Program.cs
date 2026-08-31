@@ -54,7 +54,9 @@ app.Use(async (context, next) =>
         "default-src 'self'; img-src 'self' data: https://*.tile.openstreetmap.org; "
         + "style-src 'self'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'";
     context.Response.Headers.XContentTypeOptions = "nosniff";
-    context.Response.Headers["Referrer-Policy"] = "no-referrer";
+    // Allow the browser to send a Referer for cross-origin image requests
+    // so external tile/image providers that require a referrer don't block access.
+    context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
     context.Response.Headers.Append("Permissions-Policy", "geolocation=(), camera=(), microphone=()");
     await next();
 });
