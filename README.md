@@ -30,7 +30,17 @@ Each CPC file contains the precipitation total for the preceding 60 minutes. Lon
 | `infra/bootstrap` | One-time Azure state storage and GitHub OIDC identity |
 | `infra/main` | App Service, Blob Storage, monitoring, RBAC and retention |
 | `.github/workflows` | CI and Azure deployment |
-| `docs` | Source-site analysis and design decisions |
+| `docs` | Architecture, implementation, local-development and testing documentation |
+
+## Documentation
+
+The [documentation overview](docs/README.md) links the detailed guides:
+
+- [How the application works](docs/how-it-works.md)
+- [Local development](docs/local-development.md)
+- [Testing strategy](docs/testing.md)
+- [Architecture decisions](docs/architecture.md)
+- [Source-site analysis](docs/source-site-analysis.md)
 
 ## Run locally
 
@@ -105,7 +115,7 @@ Blob lifecycle rules delete source data after 14 days and historical generated m
 
 ## Data and attribution
 
-Radar data comes from the MeteoSwiss `ch.meteoschweiz.ogd-radar-precip` STAC collection. MeteoSwiss Open Data may be reused, but the source must be cited when data are reproduced or redistributed; the UI therefore displays `Source: MeteoSwiss CombiPrecip`.
+Radar data comes from the MeteoSwiss `ch.meteoschweiz.ogd-radar-precip` STAC collection. Reuse must comply with the current MeteoSwiss terms, including their rules for attribution of unaltered data and clear separation of independently processed output from official MeteoSwiss products. The UI identifies the CombiPrecip data basis, and the application is presented as an independent visualization rather than an official weather warning.
 
 The base map uses OpenStreetMap tiles and displays the required contributor attribution. Review usage limits before operating a high-traffic public service; a production version can be switched to a suitable Swiss federal or commercial tile service.
 
@@ -121,4 +131,3 @@ This project is independent and is not affiliated with meteoradar.ch, Meteotest 
 ## License
 
 Application source code is available under the MIT License. MeteoSwiss and map data retain their respective terms and attribution requirements.
-
