@@ -15,12 +15,13 @@ public sealed partial class MeteoSwissClient(HttpClient httpClient, IOptions<Rad
         DateOnly date,
         CancellationToken cancellationToken)
     {
-        var itemUrl = new Uri(_options.StacBaseUrl, $"{date:yyyyMMdd}-ch");
+        var baseUriString = _options.StacBaseUrl.OriginalString.TrimEnd('/') + '/';
+        var itemUrl = new Uri(baseUriString + $"{date:yyyyMMdd}-ch");
         using var response = await httpClient.GetAsync(itemUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
 
         if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
-            return [];
+            return Array.Empty<RadarAsset>();
         }
 
         response.EnsureSuccessStatusCode();
@@ -29,7 +30,7 @@ public sealed partial class MeteoSwissClient(HttpClient httpClient, IOptions<Rad
 
         if (!document.RootElement.TryGetProperty("assets", out var assetsElement))
         {
-            return [];
+            return Array.Empty<RadarAsset>();
         }
 
         var assets = new List<RadarAsset>();
