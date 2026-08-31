@@ -9,6 +9,7 @@ This directory contains the technical documentation for Swiss Rain Radar.
 | [Local development](local-development.md) | Prerequisites, startup commands, local storage and troubleshooting |
 | [Testing strategy](testing.md) | Existing tests, verified behavior and the remaining integration and end-to-end work |
 | [Source-site analysis](source-site-analysis.md) | Analysis of meteoradar.ch and selection of a public replacement data source |
+| [User prompt history (German)](user-prompt-history.de.md) | Chronological record of the user inputs that led to the application and its documentation |
 
 ## Recommended reading order
 
