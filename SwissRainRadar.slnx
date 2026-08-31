@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="src/SwissRainRadar.Web/SwissRainRadar.Web.csproj" />
+  <Project Path="tests/SwissRainRadar.Tests/SwissRainRadar.Tests.csproj" />
+</Solution>
+

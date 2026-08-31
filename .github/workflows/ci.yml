@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run vendor
+      - run: dotnet restore SwissRainRadar.slnx
+      - run: dotnet build SwissRainRadar.slnx --configuration Release --no-restore
+      - run: dotnet test SwissRainRadar.slnx --configuration Release --no-build
+
+  terraform-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: hashicorp/setup-terraform@v3
+      - run: terraform fmt -check -recursive infra
+      - working-directory: infra/main
+        run: terraform init -backend=false
+      - working-directory: infra/main
+        run: terraform validate
+      - working-directory: infra/bootstrap
+        run: terraform init -backend=false
+      - working-directory: infra/bootstrap
+        run: terraform validate

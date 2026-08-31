@@ -1,0 +1,12 @@
+{
+  "name": "swiss-rain-radar-assets",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "vendor": "node scripts/vendor-assets.mjs"
+  },
+  "dependencies": {
+    "leaflet": "1.9.4"
+  }
+}
+

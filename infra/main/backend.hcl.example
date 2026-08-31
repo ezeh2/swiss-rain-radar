@@ -1,0 +1,6 @@
+resource_group_name  = "rg-swiss-rain-radar-tfstate"
+storage_account_name = "REPLACE_WITH_BOOTSTRAP_OUTPUT"
+container_name       = "tfstate"
+key                  = "swiss-rain-radar.tfstate"
+use_oidc             = true
+

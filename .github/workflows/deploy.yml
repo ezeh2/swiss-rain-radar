@@ -1,0 +1,84 @@
+name: Deploy Azure
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'infra/**'
+      - 'package*.json'
+      - 'Directory.*.props'
+      - '.github/workflows/deploy.yml'
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: azure-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      ARM_USE_OIDC: true
+      ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+      ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - uses: hashicorp/setup-terraform@v3
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci && npm run vendor
+      - name: Terraform apply
+        working-directory: infra/main
+        run: |
+          terraform init \
+            -backend-config="resource_group_name=${{ vars.TFSTATE_RESOURCE_GROUP }}" \
+            -backend-config="storage_account_name=${{ vars.TFSTATE_STORAGE_ACCOUNT }}" \
+            -backend-config="container_name=${{ vars.TFSTATE_CONTAINER }}" \
+            -backend-config="key=swiss-rain-radar.tfstate" \
+            -backend-config="use_oidc=true"
+          terraform apply -auto-approve -input=false \
+            -var="subscription_id=${{ vars.AZURE_SUBSCRIPTION_ID }}"
+      - name: Build application package
+        run: |
+          dotnet restore SwissRainRadar.slnx
+          dotnet test SwissRainRadar.slnx --configuration Release --no-restore
+          dotnet publish src/SwissRainRadar.Web/SwissRainRadar.Web.csproj \
+            --configuration Release --no-restore --output publish
+          cd publish
+          zip -r ../app.zip .
+      - name: Deploy package
+        working-directory: infra/main
+        run: |
+          az webapp deploy \
+            --resource-group "$(terraform output -raw resource_group_name)" \
+            --name "$(terraform output -raw web_app_name)" \
+            --src-path ../../app.zip \
+            --type zip \
+            --clean true
+      - name: Verify health endpoint
+        working-directory: infra/main
+        run: |
+          url="$(terraform output -raw web_app_url)/healthz"
+          for attempt in {1..12}; do
+            if curl --fail --silent --show-error "$url"; then exit 0; fi
+            sleep 10
+          done
+          exit 1
+

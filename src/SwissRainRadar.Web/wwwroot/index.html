@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#071a2b">
+  <title>Schweizer Regenkarte</title>
+  <meta name="description" content="Aktuelle Regensummen für die Schweiz auf Basis offener MeteoSchweiz-Daten.">
+  <link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="/css/site.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">MeteoSchweiz Open Data</p>
+        <h1>Schweizer Regenkarte</h1>
+      </div>
+      <div class="status" id="status" role="status" aria-live="polite">
+        <span class="status-dot"></span>
+        <span>Daten werden geladen</span>
+      </div>
+    </header>
+
+    <section class="toolbar" aria-label="Karteneinstellungen">
+      <div>
+        <span class="toolbar-label">Regensumme</span>
+        <div class="periods" id="periods" role="group" aria-label="Zeitraum auswählen"></div>
+      </div>
+      <div class="timestamp">
+        <span class="toolbar-label">Messzeitraum endet</span>
+        <strong id="period-end">–</strong>
+      </div>
+    </section>
+
+    <section class="map-card">
+      <div id="map" aria-label="Interaktive Regenkarte der Schweiz"></div>
+      <div class="loading-overlay" id="loading">Karte wird vorbereitet …</div>
+      <aside class="legend" aria-label="Farblegende">
+        <div class="legend-title">Niederschlag</div>
+        <div class="legend-scale"></div>
+        <div class="legend-labels"><span>0 mm</span><span>10</span><span>100</span><span>500+</span></div>
+      </aside>
+    </section>
+
+    <footer>
+      <span>Quelle: MeteoSchweiz CombiPrecip</span>
+      <span>Radar- und Bodenstationsdaten · Aktualisierung alle 5 Minuten</span>
+    </footer>
+  </main>
+
+  <script src="/vendor/leaflet/leaflet.js"></script>
+  <script type="module" src="/js/app.js"></script>
+</body>
+</html>
+

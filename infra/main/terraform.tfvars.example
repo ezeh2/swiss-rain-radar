@@ -1,0 +1,5 @@
+subscription_id    = "00000000-0000-0000-0000-000000000000"
+location           = "switzerlandnorth"
+resource_group_name = "rg-swiss-rain-radar"
+app_name           = "swiss-rain-radar"
+
