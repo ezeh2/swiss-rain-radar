@@ -66,7 +66,7 @@ public sealed class BlobObjectStore : IObjectStore
     {
         var paths = new List<string>();
         await foreach (var blob in _client.GetBlobContainerClient(container)
-            .GetBlobsAsync(prefix: prefix, cancellationToken: cancellationToken))
+            .GetBlobsAsync(BlobTraits.None, BlobStates.None, prefix, cancellationToken))
         {
             paths.Add(blob.Name);
         }
