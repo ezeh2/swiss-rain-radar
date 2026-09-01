@@ -29,6 +29,7 @@ The tests in `tests/SwissRainRadar.Tests` are isolated tests. They do not start 
 - Selects one non-overlapping radar product per hour.
 - Stops selection at a data gap instead of silently inventing a complete period.
 - Excludes catalog assets later than a fixed reference time and keeps eligible assets ordered.
+- Removes expired timeline entries and replaces duplicate prepared-map timestamps.
 
 ### `FixedTimeProviderTests`
 

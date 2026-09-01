@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using System.Globalization;
 using Microsoft.Extensions.Options;
 using SwissRainRadar.Web.Models;
 using SwissRainRadar.Web.Options;
@@ -72,6 +73,14 @@ public sealed partial class RadarUpdateService(
         await using var manifestStream = new MemoryStream(Encoding.UTF8.GetBytes(json));
         await objectStore.PutAsync(MapsContainer, "latest.json", manifestStream, "application/json", cancellationToken);
 
+        if (variants.Count > 0)
+        {
+            await UpdateTimelineAsync(
+                new MapSnapshot(latest.Timestamp, variants),
+                referenceTime.AddDays(-_options.TimelineRetentionDays),
+                cancellationToken);
+        }
+
         LogPublished(variants.Count, latest.Timestamp);
     }
 
@@ -138,6 +147,68 @@ public sealed partial class RadarUpdateService(
             .ToArray();
     }
 
+    public static MapTimeline MergeTimeline(
+        MapTimeline? timeline,
+        MapSnapshot snapshot,
+        DateTimeOffset cutoff)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+
+        var snapshots = (timeline?.Snapshots ?? [])
+            .Where(item => item.PeriodEnd >= cutoff && item.PeriodEnd != snapshot.PeriodEnd)
+            .Append(snapshot)
+            .OrderBy(item => item.PeriodEnd)
+            .ToArray();
+
+        return new MapTimeline(snapshots);
+    }
+
+    public static MapTimeline BuildTimelineFromPaths(
+        IEnumerable<string> paths,
+        IEnumerable<int> supportedPeriods,
+        DateTimeOffset cutoff)
+    {
+        ArgumentNullException.ThrowIfNull(paths);
+        var supported = supportedPeriods.ToHashSet();
+        var variantsByTime = new Dictionary<DateTimeOffset, Dictionary<int, MapVariant>>();
+
+        foreach (var path in paths)
+        {
+            var parts = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length != 3
+                || parts[0] != "history"
+                || !DateTimeOffset.TryParseExact(
+                    parts[1],
+                    "yyyyMMddHHmm",
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+                    out var periodEnd)
+                || periodEnd < cutoff
+                || !parts[2].EndsWith("h.png", StringComparison.Ordinal)
+                || !int.TryParse(parts[2][..^5], CultureInfo.InvariantCulture, out var hours)
+                || !supported.Contains(hours))
+            {
+                continue;
+            }
+
+            if (!variantsByTime.TryGetValue(periodEnd, out var variants))
+            {
+                variants = new Dictionary<int, MapVariant>();
+                variantsByTime.Add(periodEnd, variants);
+            }
+
+            variants[hours] = new MapVariant(hours, $"/api/maps/{periodEnd:yyyyMMddHHmm}/{hours}");
+        }
+
+        var snapshots = variantsByTime
+            .OrderBy(item => item.Key)
+            .Select(item => new MapSnapshot(
+                item.Key,
+                item.Value.Values.OrderBy(variant => variant.Hours).ToArray()))
+            .ToArray();
+        return new MapTimeline(snapshots);
+    }
+
     private async Task<IReadOnlyList<RadarAsset>> GetRecentAssetsAsync(
         int days,
         DateTimeOffset referenceTime,
@@ -163,6 +234,24 @@ public sealed partial class RadarUpdateService(
 
         await using var download = await meteoSwissClient.DownloadAsync(asset, cancellationToken);
         await objectStore.PutAsync(RawContainer, path, download, "application/x-hdf5", cancellationToken);
+    }
+
+    private async Task UpdateTimelineAsync(
+        MapSnapshot snapshot,
+        DateTimeOffset cutoff,
+        CancellationToken cancellationToken)
+    {
+        var existingJson = await objectStore.ReadTextAsync(MapsContainer, "timeline.json", cancellationToken);
+        var existing = existingJson is null
+            ? BuildTimelineFromPaths(
+                await objectStore.ListAsync(MapsContainer, "history/", cancellationToken),
+                _options.PeriodsHours,
+                cutoff)
+            : JsonSerializer.Deserialize<MapTimeline>(existingJson, JsonOptions);
+        var timeline = MergeTimeline(existing, snapshot, cutoff);
+        var json = JsonSerializer.Serialize(timeline, JsonOptions);
+        await using var stream = new MemoryStream(Encoding.UTF8.GetBytes(json));
+        await objectStore.PutAsync(MapsContainer, "timeline.json", stream, "application/json", cancellationToken);
     }
 
     private static string RawPath(RadarAsset asset) => $"{asset.Timestamp:yyyy/MM/dd}/{asset.Name}";

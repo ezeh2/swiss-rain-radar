@@ -14,5 +14,9 @@ public interface IObjectStore
     Task<Stream?> OpenReadAsync(string container, string path, CancellationToken cancellationToken);
 
     Task<string?> ReadTextAsync(string container, string path, CancellationToken cancellationToken);
-}
 
+    Task<IReadOnlyList<string>> ListAsync(
+        string container,
+        string prefix,
+        CancellationToken cancellationToken);
+}

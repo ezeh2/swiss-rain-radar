@@ -59,6 +59,21 @@ public sealed class BlobObjectStore : IObjectStore
         return response.Value.Content.ToString();
     }
 
+    public async Task<IReadOnlyList<string>> ListAsync(
+        string container,
+        string prefix,
+        CancellationToken cancellationToken)
+    {
+        var paths = new List<string>();
+        await foreach (var blob in _client.GetBlobContainerClient(container)
+            .GetBlobsAsync(prefix: prefix, cancellationToken: cancellationToken))
+        {
+            paths.Add(blob.Name);
+        }
+
+        return paths;
+    }
+
     private BlobClient GetBlob(string container, string path)
     {
         return _client.GetBlobContainerClient(container).GetBlobClient(path);

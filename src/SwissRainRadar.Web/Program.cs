@@ -13,6 +13,8 @@ builder.Services
     .ValidateDataAnnotations()
     .Validate(options => options.UpdateIntervalMinutes >= 5, "Update interval must be at least five minutes.")
     .Validate(options => options.RawRetentionDays is >= 2 and <= 30, "Raw retention must be between 2 and 30 days.")
+    .Validate(options => options.TimelineRetentionDays is >= 1 and <= 30,
+        "Timeline retention must be between 1 and 30 days.")
     .Validate(options => options.PeriodsHours.Length > 0 && options.PeriodsHours.All(period => period is >= 1 and <= 24),
         "Periods must contain values between 1 and 24 hours.")
     .Validate(options => options.FixedReferenceTimeUtc is null || options.FixedReferenceTimeUtc.Value.Offset == TimeSpan.Zero,
@@ -96,6 +98,14 @@ app.MapGet("/api/maps/latest", async (IObjectStore store, CancellationToken canc
         ? Results.Problem("No radar map has been generated yet.", statusCode: StatusCodes.Status503ServiceUnavailable)
         : Results.Text(json, "application/json");
 }).WithName("LatestMap");
+
+app.MapGet("/api/maps/timeline", async (IObjectStore store, CancellationToken cancellationToken) =>
+{
+    var json = await store.ReadTextAsync("maps", "timeline.json", cancellationToken);
+    return json is null
+        ? Results.Json(new MapTimeline([]))
+        : Results.Text(json, "application/json");
+}).WithName("MapTimeline");
 
 app.MapGet("/api/maps/{timestamp}/{hours:int}", async (
     string timestamp,
