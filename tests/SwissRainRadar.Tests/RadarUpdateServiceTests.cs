@@ -55,6 +55,14 @@ public sealed class RadarUpdateServiceTests
             selected.Select(asset => asset.Timestamp));
     }
 
+    [Fact]
+    public void NormalizePeriods_RemovesDuplicatesAndOrdersValues()
+    {
+        var periods = RadarUpdateService.NormalizePeriods([24, 1, 3, 1, 24, 6]);
+
+        Assert.Equal([1, 3, 6, 24], periods);
+    }
+
     private static RadarAsset AssetAt(DateTimeOffset timestamp) =>
         new($"file-{timestamp:yyyyMMddHHmm}", new Uri("https://example.test/file"), timestamp);
 }

@@ -22,6 +22,17 @@ let manifest;
 let radarLayer;
 let selectedHours = 24;
 
+function uniqueMapVariants(variants) {
+  const variantsByHours = new Map();
+  for (const variant of variants) {
+    if (!variantsByHours.has(variant.hours)) {
+      variantsByHours.set(variant.hours, variant);
+    }
+  }
+
+  return [...variantsByHours.values()].sort((left, right) => left.hours - right.hours);
+}
+
 function setStatus(message, type = "") {
   statusElement.className = `status ${type}`.trim();
   statusElement.querySelector("span:last-child").textContent = message;
@@ -69,7 +80,10 @@ async function loadLatest() {
 
     const nextManifest = await response.json();
     const changed = manifest?.periodEnd !== nextManifest.periodEnd;
-    manifest = nextManifest;
+    manifest = {
+      ...nextManifest,
+      maps: uniqueMapVariants(nextManifest.maps)
+    };
     renderPeriods();
 
     const end = new Date(manifest.periodEnd);
@@ -95,4 +109,3 @@ async function loadLatest() {
 
 await loadLatest();
 window.setInterval(loadLatest, 5 * 60 * 1000);
-
