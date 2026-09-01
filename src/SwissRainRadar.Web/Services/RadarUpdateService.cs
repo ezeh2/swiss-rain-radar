@@ -31,8 +31,9 @@ public sealed partial class RadarUpdateService(
             return;
         }
 
+        var periods = NormalizePeriods(_options.PeriodsHours);
         var latest = assets[^1];
-        var selected = SelectNonOverlappingHours(assets, latest.Timestamp, _options.PeriodsHours.Max());
+        var selected = SelectNonOverlappingHours(assets, latest.Timestamp, periods[^1]);
         var grids = new List<RadarGrid>(selected.Count);
 
         foreach (var asset in selected)
@@ -44,7 +45,7 @@ public sealed partial class RadarUpdateService(
         }
 
         var variants = new List<MapVariant>();
-        foreach (var period in _options.PeriodsHours.Order())
+        foreach (var period in periods)
         {
             if (grids.Count < period)
             {
@@ -66,7 +67,7 @@ public sealed partial class RadarUpdateService(
             Bounds,
             "MeteoSwiss CombiPrecip",
             grids.Count,
-            _options.PeriodsHours.Max());
+            periods[^1]);
         var json = JsonSerializer.Serialize(manifest, JsonOptions);
         await using var manifestStream = new MemoryStream(Encoding.UTF8.GetBytes(json));
         await objectStore.PutAsync(MapsContainer, "latest.json", manifestStream, "application/json", cancellationToken);
@@ -124,6 +125,16 @@ public sealed partial class RadarUpdateService(
         return assets
             .Where(asset => asset.Timestamp <= referenceTime)
             .OrderBy(asset => asset.Timestamp)
+            .ToArray();
+    }
+
+    public static IReadOnlyList<int> NormalizePeriods(IEnumerable<int> periods)
+    {
+        ArgumentNullException.ThrowIfNull(periods);
+
+        return periods
+            .Distinct()
+            .Order()
             .ToArray();
     }
 
