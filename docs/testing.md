@@ -2,7 +2,7 @@
 
 ## Current status
 
-The project has a successful .NET 10 build, 12 automated unit tests and a limited manual runtime smoke test. It has not yet completed a full real-data browser or Azure end-to-end verification.
+The project has a successful .NET 10 build, automated unit tests and a limited manual runtime smoke test. It has not yet completed a full real-data browser or Azure end-to-end verification.
 
 | Level | Present | Current coverage |
 |---|---:|---|
@@ -28,6 +28,11 @@ The tests in `tests/SwissRainRadar.Tests` are isolated tests. They do not start 
 
 - Selects one non-overlapping radar product per hour.
 - Stops selection at a data gap instead of silently inventing a complete period.
+- Excludes catalog assets later than a fixed reference time and keeps eligible assets ordered.
+
+### `FixedTimeProviderTests`
+
+- Returns the configured instant consistently and normalizes it to UTC.
 
 ### `RainfallAggregatorTests`
 
@@ -52,6 +57,20 @@ Run all tests with:
 ```bash
 dotnet test SwissRainRadar.slnx --configuration Release
 ```
+
+## Deterministic local test mode
+
+`appsettings.Development.json` fixes the reference time at `2026-08-31T06:30:00Z`, disables the broad startup backfill and makes the worker run once. Repeated application starts therefore select the same period and reuse files already present under `App_Data`.
+
+For a repeatable manual check:
+
+1. Preserve `src/SwissRainRadar.Web/App_Data` between runs.
+2. Start the application and record the manifest returned by `/api/maps/latest`.
+3. Stop and restart the application.
+4. Confirm that `periodEnd`, map URLs and files are unchanged.
+5. Confirm that the log says periodic updates are disabled and no cached HDF5 file is downloaded again.
+
+This mode controls application time and asset selection, but it does not make the external STAC catalog permanent. Once the chosen date is no longer published, a new checkout needs preserved fixtures/cache or a newer fixed timestamp.
 
 ## Manual smoke test already performed
 

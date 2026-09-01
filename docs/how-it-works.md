@@ -79,14 +79,31 @@ The default interval is configured in `appsettings.json`:
 {
   "Radar": {
     "UpdateIntervalMinutes": 5,
-    "RawRetentionDays": 14,
+    "RawRetentionDays": 2,
     "BackfillOnStartup": true,
+    "FixedReferenceTimeUtc": null,
+    "RunOnceWhenReferenceTimeIsFixed": true,
     "PeriodsHours": [1, 3, 6, 12, 24]
   }
 }
 ```
 
 Configuration validation prevents intervals shorter than five minutes.
+
+### Reproducible fixed-time mode
+
+`RadarUpdateService` receives .NET's `TimeProvider` instead of reading the system clock directly. Normally `Program.cs` registers `TimeProvider.System`. When `Radar:FixedReferenceTimeUtc` contains a UTC timestamp, it registers `FixedTimeProvider` instead.
+
+The service captures that time once at the start of an update and uses it consistently to:
+
+1. Choose the STAC calendar days to query.
+2. Reject assets whose timestamp is later than the reference time.
+3. Select the latest eligible accumulation period.
+4. Set the manifest's `updatedAt` value.
+
+With `RunOnceWhenReferenceTimeIsFixed=true`, the worker completes the immediate update (and an enabled backfill) and then exits without creating its periodic timer. Restarts therefore select the same source files and reuse them from storage. STAC metadata is still queried on each start; a fixed timestamp is not a permanent external-data archive.
+
+The committed Development settings fix the time at `2026-08-31T06:30:00Z` and disable startup backfill. The production default remains `null`, so Azure continues to use current UTC time and five-minute polling.
 
 ### Polling is not always downloading
 
@@ -98,8 +115,8 @@ The application currently uses hourly CombiPrecip windows. Polling every five mi
 
 `UpdateLatestAsync` performs the following work:
 
-1. Query STAC items for today and yesterday.
-2. Select the newest CombiPrecip asset.
+1. Query STAC items for the reference day and preceding day.
+2. Exclude assets later than the reference time and select the newest eligible CombiPrecip asset.
 3. Select up to 24 assets exactly one hour apart.
 4. Download only assets that are not already stored.
 5. Read each binary HDF5 precipitation grid.

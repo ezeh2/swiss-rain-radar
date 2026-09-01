@@ -15,6 +15,17 @@ public sealed partial class RadarUpdateWorker(
     {
         await RunUpdateAsync(stoppingToken);
 
+        if (_options.FixedReferenceTimeUtc is not null && _options.RunOnceWhenReferenceTimeIsFixed)
+        {
+            if (_options.BackfillOnStartup)
+            {
+                await RunBackfillAsync(stoppingToken);
+            }
+
+            LogFixedReferenceRunCompleted(_options.FixedReferenceTimeUtc.Value);
+            return;
+        }
+
         if (_options.BackfillOnStartup)
         {
             _ = Task.Run(() => RunBackfillAsync(stoppingToken), stoppingToken);
@@ -66,4 +77,8 @@ public sealed partial class RadarUpdateWorker(
 
     [LoggerMessage(Level = LogLevel.Error, Message = "The optional raw-data backfill failed.")]
     private partial void LogBackfillFailure(Exception exception);
+
+    [LoggerMessage(Level = LogLevel.Information,
+        Message = "Fixed reference time {referenceTime} processed; periodic radar updates are disabled.")]
+    private partial void LogFixedReferenceRunCompleted(DateTimeOffset referenceTime);
 }

@@ -12,6 +12,9 @@ public sealed class RadarOptions
 
     public bool BackfillOnStartup { get; init; } = true;
 
+    public DateTimeOffset? FixedReferenceTimeUtc { get; init; }
+
+    public bool RunOnceWhenReferenceTimeIsFixed { get; init; } = true;
+
     public int[] PeriodsHours { get; init; } = [1, 3, 6, 12, 24];
 }
-

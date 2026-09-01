@@ -12,6 +12,7 @@ public sealed partial class RadarUpdateService(
     HdfRadarReader reader,
     RainfallAggregator aggregator,
     RadarImageRenderer renderer,
+    TimeProvider timeProvider,
     IOptions<RadarOptions> options,
     ILogger<RadarUpdateService> logger)
 {
@@ -22,7 +23,8 @@ public sealed partial class RadarUpdateService(
 
     public async Task UpdateLatestAsync(CancellationToken cancellationToken)
     {
-        var assets = await GetRecentAssetsAsync(days: 2, cancellationToken);
+        var referenceTime = timeProvider.GetUtcNow();
+        var assets = await GetRecentAssetsAsync(days: 2, referenceTime, cancellationToken);
         if (assets.Count == 0)
         {
             LogNoAssets();
@@ -58,7 +60,7 @@ public sealed partial class RadarUpdateService(
         }
 
         var manifest = new MapManifest(
-            DateTimeOffset.UtcNow,
+            referenceTime,
             latest.Timestamp,
             variants,
             Bounds,
@@ -79,7 +81,8 @@ public sealed partial class RadarUpdateService(
             return;
         }
 
-        var assets = await GetRecentAssetsAsync(_options.RawRetentionDays, cancellationToken);
+        var referenceTime = timeProvider.GetUtcNow();
+        var assets = await GetRecentAssetsAsync(_options.RawRetentionDays, referenceTime, cancellationToken);
         LogBackfill(assets.Count);
 
         foreach (var asset in assets)
@@ -112,18 +115,31 @@ public sealed partial class RadarUpdateService(
         return result;
     }
 
+    public static IReadOnlyList<RadarAsset> SelectAssetsAtOrBefore(
+        IEnumerable<RadarAsset> assets,
+        DateTimeOffset referenceTime)
+    {
+        ArgumentNullException.ThrowIfNull(assets);
+
+        return assets
+            .Where(asset => asset.Timestamp <= referenceTime)
+            .OrderBy(asset => asset.Timestamp)
+            .ToArray();
+    }
+
     private async Task<IReadOnlyList<RadarAsset>> GetRecentAssetsAsync(
         int days,
+        DateTimeOffset referenceTime,
         CancellationToken cancellationToken)
     {
         var result = new List<RadarAsset>();
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = DateOnly.FromDateTime(referenceTime.UtcDateTime);
         for (var offset = days - 1; offset >= 0; offset--)
         {
             result.AddRange(await meteoSwissClient.GetAssetsAsync(today.AddDays(-offset), cancellationToken));
         }
 
-        return result.OrderBy(asset => asset.Timestamp).ToArray();
+        return SelectAssetsAtOrBefore(result, referenceTime);
     }
 
     private async Task EnsureRawAssetAsync(RadarAsset asset, CancellationToken cancellationToken)
