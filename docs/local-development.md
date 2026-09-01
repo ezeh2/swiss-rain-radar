@@ -26,33 +26,35 @@ dotnet test SwissRainRadar.slnx --configuration Release --no-build
 
 ## First local start
 
-The default configuration enables a 14-day source-data backfill. Disable it for the first interactive test to reduce download time and disk use.
+The Development configuration uses a deterministic test mode by default:
 
-### PowerShell
+```json
+{
+  "Radar": {
+    "BackfillOnStartup": false,
+    "FixedReferenceTimeUtc": "2026-08-31T06:30:00Z",
+    "RunOnceWhenReferenceTimeIsFixed": true
+  }
+}
+```
 
-```powershell
-$env:Radar__BackfillOnStartup = "false"
+Start the application with:
+
+```bash
 dotnet run --project src/SwissRainRadar.Web
 ```
 
-Remove the override for a later terminal session with:
+The committed launch profile sets `ASPNETCORE_ENVIRONMENT=Development` and listens on `http://localhost:5180`. An IDE may display or override that address.
 
-```powershell
-Remove-Item Env:Radar__BackfillOnStartup
-```
+The worker queries and processes only source assets at or before the fixed UTC timestamp. It runs once and does not start its five-minute timer. Existing local HDF5 files and generated maps are reused after a restart.
 
-### Bash
+The public STAC catalog retains a limited source window. A clean machine may therefore no longer be able to download the 2026-08-31 sample after it leaves that window; keep the cached `App_Data` directory or choose a newer known timestamp in `appsettings.Development.json`.
 
-```bash
-Radar__BackfillOnStartup=false \
-  dotnet run --project src/SwissRainRadar.Web
-```
-
-Open the HTTP or HTTPS URL printed by ASP.NET. The exact development port is selected by the local .NET environment.
+To test live operation, set `FixedReferenceTimeUtc` to `null` in `appsettings.Development.json`. The normal five-minute timer then runs. A fixed value must be an ISO 8601 UTC timestamp ending in `Z` and must not be in the future.
 
 ## Startup behavior
 
-The application begins serving HTTP and starts `RadarUpdateWorker` in the same process. The worker checks MeteoSwiss immediately and then every five minutes. The first map is unavailable until enough source files have been downloaded and processed.
+The application begins serving HTTP and starts `RadarUpdateWorker` in the same process. In the default Development test mode the worker performs one update. With no fixed reference time it checks MeteoSwiss immediately and then every five minutes. The first map is unavailable until enough source files have been downloaded and processed.
 
 During this initial period:
 
@@ -150,7 +152,7 @@ Check the log and the effective `Storage:AccountUri`. A non-empty account URI sw
 
 ### The worker makes no updates after a pause
 
-The timer exists only in the running ASP.NET process. Locally, stopping `dotnet run` stops the worker. In Azure, `always_on = false` allows an idle application to sleep; the next request restarts it and triggers an immediate update.
+First check `Radar:FixedReferenceTimeUtc`: the Development default intentionally runs only once. In live mode the timer exists only in the running ASP.NET process. Locally, stopping `dotnet run` stops the worker. In Azure, `always_on = false` allows an idle application to sleep; the next request restarts it and triggers an immediate update.
 
 ### OpenStreetMap is blank but the application is healthy
 

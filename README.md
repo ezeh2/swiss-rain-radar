@@ -59,6 +59,8 @@ dotnet run --project src/SwissRainRadar.Web
 
 Without `Storage__AccountUri`, files are written under `src/SwissRainRadar.Web/App_Data`. The first map normally appears after the app downloads and processes the required CPC files.
 
+Local Development uses the fixed reference time `2026-08-31T06:30:00Z` and runs the importer once, making restarts deterministic. Set `Radar:FixedReferenceTimeUtc` to `null` in `appsettings.Development.json` to exercise live five-minute polling. See [Local development](docs/local-development.md) for retention and cache details.
+
 ## Deploy to Azure
 
 ### 1. Bootstrap OIDC and Terraform state

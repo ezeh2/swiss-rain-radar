@@ -36,5 +36,25 @@ public sealed class RadarUpdateServiceTests
 
         Assert.Single(selected);
     }
-}
 
+    [Fact]
+    public void SelectAssetsAtOrBefore_ExcludesLaterAssetsAndOrdersTheResult()
+    {
+        var referenceTime = new DateTimeOffset(2026, 8, 31, 6, 30, 0, TimeSpan.Zero);
+        RadarAsset[] assets =
+        [
+            AssetAt(referenceTime.AddMinutes(5)),
+            AssetAt(referenceTime),
+            AssetAt(referenceTime.AddHours(-1))
+        ];
+
+        var selected = RadarUpdateService.SelectAssetsAtOrBefore(assets, referenceTime);
+
+        Assert.Equal(
+            [referenceTime.AddHours(-1), referenceTime],
+            selected.Select(asset => asset.Timestamp));
+    }
+
+    private static RadarAsset AssetAt(DateTimeOffset timestamp) =>
+        new($"file-{timestamp:yyyyMMddHHmm}", new Uri("https://example.test/file"), timestamp);
+}

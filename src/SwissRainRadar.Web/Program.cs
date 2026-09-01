@@ -15,6 +15,10 @@ builder.Services
     .Validate(options => options.RawRetentionDays is >= 2 and <= 30, "Raw retention must be between 2 and 30 days.")
     .Validate(options => options.PeriodsHours.Length > 0 && options.PeriodsHours.All(period => period is >= 1 and <= 24),
         "Periods must contain values between 1 and 24 hours.")
+    .Validate(options => options.FixedReferenceTimeUtc is null || options.FixedReferenceTimeUtc.Value.Offset == TimeSpan.Zero,
+        "The fixed reference time must use UTC (the value must end in Z).")
+    .Validate(options => options.FixedReferenceTimeUtc is null || options.FixedReferenceTimeUtc.Value <= DateTimeOffset.UtcNow,
+        "The fixed reference time must not be in the future.")
     .ValidateOnStart();
 builder.Services
     .AddOptions<StorageOptions>()
@@ -30,6 +34,13 @@ builder.Services.AddHealthChecks();
 builder.Services.AddSingleton<HdfRadarReader>();
 builder.Services.AddSingleton<RainfallAggregator>();
 builder.Services.AddSingleton<RadarImageRenderer>();
+builder.Services.AddSingleton<TimeProvider>(services =>
+{
+    var radarOptions = services.GetRequiredService<IOptions<RadarOptions>>().Value;
+    return radarOptions.FixedReferenceTimeUtc is { } fixedReferenceTime
+        ? new FixedTimeProvider(fixedReferenceTime)
+        : TimeProvider.System;
+});
 builder.Services.AddScoped<RadarUpdateService>();
 builder.Services.AddHostedService<RadarUpdateWorker>();
 
