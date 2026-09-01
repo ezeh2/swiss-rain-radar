@@ -76,9 +76,7 @@ app.UseStaticFiles(new StaticFileOptions
 {
     OnPrepareResponse = context =>
     {
-        context.Context.Response.Headers.CacheControl = context.File.Name.Contains("latest", StringComparison.OrdinalIgnoreCase)
-            ? "no-cache"
-            : "public,max-age=604800,immutable";
+        context.Context.Response.Headers.CacheControl = "no-cache";
     }
 });
 
