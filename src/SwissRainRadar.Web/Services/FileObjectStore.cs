@@ -49,6 +49,28 @@ public sealed class FileObjectStore(IWebHostEnvironment environment, IOptions<St
             : null;
     }
 
+    public Task<IReadOnlyList<string>> ListAsync(
+        string container,
+        string prefix,
+        CancellationToken cancellationToken)
+    {
+        var containerRoot = Path.GetFullPath(Path.Combine(_root, container));
+        var prefixRoot = GetPath(container, prefix);
+        if (!Directory.Exists(prefixRoot))
+        {
+            return Task.FromResult<IReadOnlyList<string>>([]);
+        }
+
+        var paths = Directory.EnumerateFiles(prefixRoot, "*", SearchOption.AllDirectories)
+            .Select(path =>
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                return Path.GetRelativePath(containerRoot, path).Replace(Path.DirectorySeparatorChar, '/');
+            })
+            .ToArray();
+        return Task.FromResult<IReadOnlyList<string>>(paths);
+    }
+
     private string GetPath(string container, string path)
     {
         var combined = Path.GetFullPath(Path.Combine(_root, container, path.Replace('/', Path.DirectorySeparatorChar)));
@@ -62,4 +84,3 @@ public sealed class FileObjectStore(IWebHostEnvironment environment, IOptions<St
         return combined;
     }
 }
-

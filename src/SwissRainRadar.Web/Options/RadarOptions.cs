@@ -10,6 +10,8 @@ public sealed class RadarOptions
 
     public int RawRetentionDays { get; init; } = 14;
 
+    public int TimelineRetentionDays { get; init; } = 14;
+
     public bool BackfillOnStartup { get; init; } = true;
 
     public DateTimeOffset? FixedReferenceTimeUtc { get; init; }

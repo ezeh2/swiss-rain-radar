@@ -63,6 +63,48 @@ public sealed class RadarUpdateServiceTests
         Assert.Equal([1, 3, 6, 24], periods);
     }
 
+    [Fact]
+    public void MergeTimeline_RemovesExpiredAndReplacesDuplicateSnapshots()
+    {
+        var cutoff = new DateTimeOffset(2026, 8, 20, 0, 0, 0, TimeSpan.Zero);
+        var retainedTime = cutoff.AddDays(1);
+        var replacement = SnapshotAt(retainedTime, 3);
+        var timeline = new MapTimeline(
+        [
+            SnapshotAt(cutoff.AddMinutes(-1), 1),
+            SnapshotAt(retainedTime, 1)
+        ]);
+
+        var result = RadarUpdateService.MergeTimeline(timeline, replacement, cutoff);
+
+        var snapshot = Assert.Single(result.Snapshots);
+        Assert.Equal(retainedTime, snapshot.PeriodEnd);
+        Assert.Equal(3, Assert.Single(snapshot.Maps).Hours);
+    }
+
+    [Fact]
+    public void BuildTimelineFromPaths_IndexesOnlyPreparedSupportedMaps()
+    {
+        var cutoff = new DateTimeOffset(2026, 8, 20, 0, 0, 0, TimeSpan.Zero);
+        string[] paths =
+        [
+            "history/202608210630/3h.png",
+            "history/202608210630/1h.png",
+            "history/202608190630/1h.png",
+            "history/invalid/1h.png",
+            "history/202608210630/2h.png"
+        ];
+
+        var result = RadarUpdateService.BuildTimelineFromPaths(paths, [1, 3, 6, 12, 24], cutoff);
+
+        var snapshot = Assert.Single(result.Snapshots);
+        Assert.Equal(new DateTimeOffset(2026, 8, 21, 6, 30, 0, TimeSpan.Zero), snapshot.PeriodEnd);
+        Assert.Equal([1, 3], snapshot.Maps.Select(map => map.Hours));
+    }
+
     private static RadarAsset AssetAt(DateTimeOffset timestamp) =>
         new($"file-{timestamp:yyyyMMddHHmm}", new Uri("https://example.test/file"), timestamp);
+
+    private static MapSnapshot SnapshotAt(DateTimeOffset timestamp, int hours) =>
+        new(timestamp, [new MapVariant(hours, $"/api/maps/{timestamp:yyyyMMddHHmm}/{hours}")]);
 }

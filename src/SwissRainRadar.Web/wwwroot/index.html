@@ -7,7 +7,7 @@
   <title>Schweizer Regenkarte</title>
   <meta name="description" content="Aktuelle Regensummen für die Schweiz auf Basis offener MeteoSchweiz-Daten.">
   <link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
-  <link rel="stylesheet" href="/css/site.css?v=20260901-2">
+  <link rel="stylesheet" href="/css/site.css?v=20260901-3">
 </head>
 <body>
   <main class="app-shell">
@@ -63,6 +63,18 @@
       </aside>
     </section>
 
+    <section class="timeline-panel" aria-labelledby="timeline-label">
+      <div class="timeline-heading">
+        <label class="toolbar-label" id="timeline-label" for="timeline">Zeitpunkt auswählen</label>
+        <output id="timeline-selected" for="timeline">–</output>
+      </div>
+      <input id="timeline" type="range" min="0" max="0" step="300" value="0" disabled>
+      <div class="timeline-limits" aria-hidden="true">
+        <span id="timeline-start">–</span>
+        <span id="timeline-end">–</span>
+      </div>
+    </section>
+
     <footer>
       <span>Quelle: MeteoSchweiz CombiPrecip</span>
       <span>Radar- und Bodenstationsdaten · Aktualisierung alle 5 Minuten</span>
@@ -70,6 +82,6 @@
   </main>
 
   <script src="/vendor/leaflet/leaflet.js"></script>
-  <script type="module" src="/js/app.js?v=20260901-2"></script>
+  <script type="module" src="/js/app.js?v=20260901-3"></script>
 </body>
 </html>

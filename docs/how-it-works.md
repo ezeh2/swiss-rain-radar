@@ -125,6 +125,8 @@ The application currently uses hourly CombiPrecip windows. Polling every five mi
 8. Store the timestamped maps.
 9. Replace `maps/latest.json` with a manifest for the browser.
 
+When at least one map variant was generated, the same update also merges a snapshot into `maps/timeline.json`. The timeline contains only prepared PNG variants, is ordered by period end, replaces duplicate timestamps and retains the configured number of days (`Radar:TimelineRetentionDays`, default 14). It does not trigger historical processing or list Blob objects on each browser request.
+
 The source CPC products are rolling 60-minute totals published more frequently than once per hour. Summing every publication would count the same rain repeatedly, so `SelectNonOverlappingHours` deliberately chooses files one hour apart.
 
 ### Startup backfill
@@ -229,6 +231,7 @@ The `wwwroot` files are included in the ASP.NET publish output and deployed with
 | `GET /` | Static application shell |
 | `GET /healthz` | Process health response |
 | `GET /api/maps/latest` | Current JSON manifest or HTTP 503 before the first map exists |
+| `GET /api/maps/timeline` | Ordered catalog of already prepared historical maps |
 | `GET /api/maps/{timestamp}/{hours}` | A generated PNG read from the active object store |
 
 Raw HDF5 files are never exposed by a public endpoint. Map containers remain private; ASP.NET validates the timestamp and supported period before streaming an image.
@@ -245,6 +248,8 @@ The visible map is composed from two principal layers:
 2. A transparent rain PNG exposed by the ASP.NET map API and positioned with a Leaflet `ImageOverlay`.
 
 The server manifest supplies the geographic bounds. Leaflet stretches the transparent image over those bounds and keeps it aligned while the user zooms or pans. Switching between 1, 3, 6, 12 and 24 hours replaces the image overlay without resetting the viewport.
+
+The full-width timeline below the map spans the oldest through newest catalog timestamp in five-minute increments. While it is dragged, JavaScript changes only the displayed requested time. The browser selects the last prepared snapshot at or before that time and requests its PNG only when the range input emits `change`, normally after the mouse button or touch gesture is released.
 
 MeteoSwiss source grids use LV95. `RadarImageRenderer` converts regular output pixels between WGS84 and LV95 while rendering. Leaflet receives ordinary latitude and longitude bounds and handles its browser-map projection internally.
 
