@@ -19,13 +19,15 @@ public sealed partial class RadarUpdateService(
 {
     private const string RawContainer = "raw";
     private const string MapsContainer = "maps";
+    // A 24-hour accumulation can cross midnight, so its source assets may span two calendar days.
+    private const int LatestAssetQueryDays = 2;
     private static readonly MapBounds Bounds = new(43.619, 2.68942, 49.3744, 12.4623);
     private readonly RadarOptions _options = options.Value;
 
     public async Task UpdateLatestAsync(CancellationToken cancellationToken)
     {
         var referenceTime = timeProvider.GetUtcNow();
-        var assets = await GetRecentAssetsAsync(days: 2, referenceTime, cancellationToken);
+        var assets = await GetRecentAssetsAsync(LatestAssetQueryDays, referenceTime, cancellationToken);
         if (assets.Count == 0)
         {
             LogNoAssets();
