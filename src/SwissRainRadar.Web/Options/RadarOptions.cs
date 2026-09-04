@@ -18,5 +18,5 @@ public sealed class RadarOptions
 
     public bool RunOnceWhenReferenceTimeIsFixed { get; init; } = true;
 
-    public int[] PeriodsHours { get; init; } = [1, 3, 6, 12, 24];
+    public int[] PeriodsHours { get; init; } = Array.Empty<int>();
 }
