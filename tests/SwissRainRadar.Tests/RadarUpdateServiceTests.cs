@@ -37,6 +37,22 @@ public sealed class RadarUpdateCoordinatorTests
         Assert.Single(selected);
     }
 
+    [Theory]
+    [InlineData(7, 0, 1)]
+    [InlineData(7, 1, 0)]
+    public void SelectNonOverlappingHours_EnforcesMaximumAssetDelay(
+        int minutes,
+        int seconds,
+        int expectedCount)
+    {
+        var end = new DateTimeOffset(2026, 8, 31, 8, 30, 0, TimeSpan.Zero);
+        RadarAsset[] assets = [AssetAt(end.AddMinutes(-minutes).AddSeconds(-seconds))];
+
+        var selected = RadarUpdateCoordinator.SelectNonOverlappingHours(assets, end, 1);
+
+        Assert.Equal(expectedCount, selected.Count);
+    }
+
     [Fact]
     public void SelectAssetsAtOrBefore_ExcludesLaterAssetsAndOrdersTheResult()
     {

@@ -7,9 +7,15 @@ using SwissRainRadar.Web.Options;
 
 namespace SwissRainRadar.Web.Services;
 
+/// <summary>
+/// A client for the MeteoSwiss radar data service. It queries the STAC API for available assets and downloads them as needed.
+/// </summary>
+/// <param name="httpClient"></param>
+/// <param name="options"></param> 
 public sealed partial class MeteoSwissClient(HttpClient httpClient, IOptions<RadarOptions> options)
 {
     private readonly RadarOptions _options = options.Value;
+    private readonly JsonSerializerOptions _jsonSerializerOptions = new JsonSerializerOptions { WriteIndented = true };
 
     public async Task<IReadOnlyList<RadarAsset>> GetAssetsAsync(
         DateOnly date,
@@ -28,11 +34,18 @@ public sealed partial class MeteoSwissClient(HttpClient httpClient, IOptions<Rad
         await using var content = await response.Content.ReadAsStreamAsync(cancellationToken);
         using var document = await JsonDocument.ParseAsync(content, cancellationToken: cancellationToken);
 
+        // write document to file for debugging, filename from itemUrl, e.g. "20230901-ch.json"
+        var fileName = itemUrl.Segments[^1];
+        using var fileStream = new FileStream(fileName, FileMode.Create, FileAccess.Write);
+        await JsonSerializer.SerializeAsync(fileStream, document, _jsonSerializerOptions, cancellationToken);   
+
         if (!document.RootElement.TryGetProperty("assets", out var assetsElement))
         {
             return Array.Empty<RadarAsset>();
         }
 
+        // loop over assets in the JSON document
+        // one assert for every 5 minutes, i.e. for 24h there are 24 * 60 / 5 = 288 assets
         var assets = new List<RadarAsset>();
         foreach (var assetProperty in assetsElement.EnumerateObject())
         {

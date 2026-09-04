@@ -4,8 +4,11 @@ namespace SwissRainRadar.Web.Services;
 
 /// <summary>
 /// Imports raw radar files from MeteoSwiss into the configured object store.
-/// Input files: remote MeteoSwiss HDF5 radar files. Output files: stored HDF5 radar files
-/// under the <c>raw</c> container. Existing files are skipped, so the operation can safely
+/// Input: RadarAsset-objects parsed from MeteoSwiss asset metadata. 
+/// Output: stored HDF5 radar files under the <c>raw</c> container. under the <c>raw</c> container. 
+/// example file name: <c>raw/2026/08/31/cpc2624300009_00060.001.h5</c>
+/// 
+/// Existing files are skipped, so the operation can safely
 /// process a batch containing files that were imported previously.
 /// </summary>
 public sealed class RawRadarFileImporter(MeteoSwissClient meteoSwissClient, IObjectStore objectStore)

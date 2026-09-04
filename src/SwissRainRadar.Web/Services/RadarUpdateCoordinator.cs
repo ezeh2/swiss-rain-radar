@@ -22,10 +22,15 @@ public sealed partial class RadarUpdateCoordinator(
     ILogger<RadarUpdateCoordinator> logger)
 {
     private const int LatestAssetQueryDays = 2;
+    // CPC assets normally arrive every five minutes. Allow two additional minutes for
+    // delayed or missing publications while keeping adjacent hourly windows separate.
+    private static readonly TimeSpan MaximumAssetDelay = TimeSpan.FromMinutes(7);
     private readonly RadarOptions _options = options.Value;
 
     public async Task UpdateLatestAsync(CancellationToken cancellationToken)
     {
+        // if FixedReferenceTimeUtc in appsettings.json is set, then timeProvider is object of class FixedTimeProvider, 
+        // otherwise it is object of class SystemTimeProvider
         var referenceTime = timeProvider.GetUtcNow();
         var assets = await GetRecentAssetsAsync(LatestAssetQueryDays, referenceTime, cancellationToken);
         if (assets.Count == 0)
@@ -75,6 +80,13 @@ public sealed partial class RadarUpdateCoordinator(
         await rawFileImporter.DownloadRawRadarFilesAsync(assets, cancellationToken);
     }
 
+    /// <summary>
+    /// eliminates overlapping assets and selects the most recent asset for each hour in the given period, starting from the periodEnd and going backwards
+    /// </summary>
+    /// <param name="assets"></param>
+    /// <param name="periodEnd"></param>
+    /// <param name="hours"></param>
+    /// <returns></returns>
     public static IReadOnlyList<RadarAsset> SelectNonOverlappingHours(
         IReadOnlyList<RadarAsset> assets,
         DateTimeOffset periodEnd,
@@ -85,7 +97,7 @@ public sealed partial class RadarUpdateCoordinator(
         {
             var target = periodEnd.AddHours(-offset);
             var candidate = assets
-                .Where(asset => asset.Timestamp <= target && target - asset.Timestamp <= TimeSpan.FromMinutes(7))
+                .Where(asset => asset.Timestamp <= target && target - asset.Timestamp <= MaximumAssetDelay)
                 .MaxBy(asset => asset.Timestamp);
 
             if (candidate is null)
@@ -110,25 +122,50 @@ public sealed partial class RadarUpdateCoordinator(
             .ToArray();
     }
 
+    /// <summary>
+    /// eliminates duplicates and sort the periods in ascending order, e.g. [1, 3, 2, 1] -> [1, 2, 3]
+    /// </summary>
+    /// <param name="periods"></param>
+    /// <returns></returns>
     public static IReadOnlyList<int> NormalizePeriods(IEnumerable<int> periods)
     {
         ArgumentNullException.ThrowIfNull(periods);
         return periods.Distinct().Order().ToArray();
     }
 
+    /// <summary>
+    /// * downloads json-files for the last <paramref name="days"/> days from MeteoSwiss STAC API
+    /// * extracts the radar assets from the json-files
+    /// * selects the assets that are at or before the <paramref name="referenceTime"/>
+    /// * returns the selected assets ordered by timestamp ascending
+    /// </summary>
+    /// <param name="days"></param>
+    /// <param name="referenceTime"></param>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     private async Task<IReadOnlyList<RadarAsset>> GetRecentAssetsAsync(
         int days,
         DateTimeOffset referenceTime,
         CancellationToken cancellationToken)
     {
-        var result = new List<RadarAsset>();
+        var result1 = new List<RadarAsset>();
         var today = DateOnly.FromDateTime(referenceTime.UtcDateTime);
+        // if days==2 then offset = 1,0; i.e. 48 hours of data
+        // if days==3 then offset = 2,1,0; i.e. 72 hours of data
         for (var offset = days - 1; offset >= 0; offset--)
         {
-            result.AddRange(await meteoSwissClient.GetAssetsAsync(today.AddDays(-offset), cancellationToken));
+            // for every 5 minutes 1 asset, i.e. 24 * 60 / 5 = 288 assets per day
+            result1.AddRange(await meteoSwissClient.GetAssetsAsync(today.AddDays(-offset), cancellationToken));
         }
 
-        return SelectAssetsAtOrBefore(result, referenceTime);
+        // expected number of assets for the given days, e.g. 2 days = 288 * 2 = 576 assets
+        int cnt1 = result1.Count;
+
+        var result2 = SelectAssetsAtOrBefore(result1, referenceTime);
+        
+        // expected number of assets for the given days, e.g. 2 days = 288 * 2 = 576 assets
+        int cnt2 = result2.Count;
+        return result2;
     }
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "No MeteoSwiss CPC assets are currently available.")]
