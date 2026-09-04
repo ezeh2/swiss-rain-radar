@@ -1,28 +1,35 @@
 # Services: Abhängigkeiten und Aktualisierungsablauf
 
 Diese Dokumentation beschreibt die Service-Klassen in diesem Ordner und den Ablauf von
-`RadarUpdateService.UpdateLatestAsync()`.
+`RadarUpdateCoordinator.UpdateLatestAsync()`.
 
 ## Service-Abhängigkeiten
 
 ```mermaid
 flowchart TD
-    Worker[RadarUpdateWorker] -->|Scope erzeugen und Update starten| Update[RadarUpdateService]
+    Worker[RadarUpdateWorker] -->|Scope erzeugen und Update starten| Update[RadarUpdateCoordinator]
 
     Update --> Time[TimeProvider]
     Time -.-> SystemTime[TimeProvider.System]
     Time -.-> FixedTime[FixedTimeProvider]
 
     Update --> Client[MeteoSwissClient]
+    Update --> Importer[RawRadarFileImporter]
+    Update --> Maps[RainMapFileProcessor]
+    Update --> Manifest[MapManifestFileProcessor]
+    Update --> Timeline[MapTimelineFileProcessor]
     Client -->|STAC-JSON und HDF5-Dateien| MeteoSwiss[(MeteoSwiss)]
 
-    Update --> Store[IObjectStore]
+    Importer --> Store[IObjectStore]
+    Maps --> Store
+    Manifest --> Store
+    Timeline --> Store
     Store -.-> FileStore[FileObjectStore]
     Store -.-> BlobStore[BlobObjectStore]
 
-    Update --> Reader[HdfRadarReader]
-    Update --> Aggregator[RainfallAggregator]
-    Update --> Renderer[RadarImageRenderer]
+    Maps --> Reader[HdfRadarReader]
+    Maps --> Aggregator[RainfallAggregator]
+    Maps --> Renderer[RadarImageRenderer]
 
     Renderer --> Projection[SwissProjection]
     Renderer --> Colors[RadarColorScale]
@@ -49,7 +56,7 @@ WGS84-Koordinaten in LV95 um, `RadarColorScale` ordnet den Regenwerten RGBA-Farb
 sequenceDiagram
     autonumber
     participant Worker as RadarUpdateWorker
-    participant Update as RadarUpdateService
+    participant Update as RadarUpdateCoordinator
     participant Time as TimeProvider
     participant Client as MeteoSwissClient
     participant Meteo as MeteoSwiss
@@ -133,7 +140,11 @@ Die Rohdaten werden unter `raw/yyyy/MM/dd/` gespeichert. Vorbereitete Karten lie
 ## Zugehörige Dateien
 
 - [`RadarUpdateWorker.cs`](RadarUpdateWorker.cs): Zeitsteuerung und Aufruf des Services
-- [`RadarUpdateService.cs`](RadarUpdateService.cs): Orchestrierung der Aktualisierung
+- [`RadarUpdateCoordinator.cs`](RadarUpdateCoordinator.cs): Orchestrierung der Aktualisierung
+- [`RawRadarFileImporter.cs`](RawRadarFileImporter.cs): HDF5-Dateien von MeteoSwiss herunterladen und speichern
+- [`RainMapFileProcessor.cs`](RainMapFileProcessor.cs): gespeicherte HDF5-Dateien in PNG-Karten umwandeln
+- [`MapManifestFileProcessor.cs`](MapManifestFileProcessor.cs): `latest.json` aus den neuesten PNG-Karten erzeugen
+- [`MapTimelineFileProcessor.cs`](MapTimelineFileProcessor.cs): `timeline.json` aus historischen PNG-Karten erzeugen
 - [`MeteoSwissClient.cs`](MeteoSwissClient.cs): STAC-Abfrage und Download der HDF5-Dateien
 - [`IObjectStore.cs`](IObjectStore.cs): Speicherabstraktion
 - [`FileObjectStore.cs`](FileObjectStore.cs): Speicherung im lokalen Dateisystem

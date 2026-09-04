@@ -43,7 +43,11 @@ builder.Services.AddSingleton<TimeProvider>(services =>
         ? new FixedTimeProvider(fixedReferenceTime)
         : TimeProvider.System;
 });
-builder.Services.AddScoped<RadarUpdateService>();
+builder.Services.AddScoped<RawRadarFileImporter>();
+builder.Services.AddScoped<RainMapFileProcessor>();
+builder.Services.AddScoped<MapManifestFileProcessor>();
+builder.Services.AddScoped<MapTimelineFileProcessor>();
+builder.Services.AddScoped<RadarUpdateCoordinator>();
 builder.Services.AddHostedService<RadarUpdateWorker>();
 
 var storageAccountUri = builder.Configuration[$"{StorageOptions.SectionName}:AccountUri"];

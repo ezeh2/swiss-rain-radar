@@ -24,7 +24,7 @@ The tests in `tests/SwissRainRadar.Tests` are isolated tests. They do not start 
 - Parses a timestamp from a supported CPC file name.
 - Rejects unrelated or malformed file names.
 
-### `RadarUpdateServiceTests`
+### `RadarUpdateCoordinatorTests`
 
 - Selects one non-overlapping radar product per hour.
 - Stops selection at a data gap instead of silently inventing a complete period.
@@ -125,7 +125,7 @@ Use a fake `MeteoSwissClient` response and temporary `FileObjectStore`:
 
 ```text
 Known source grids
-→ RadarUpdateService
+→ RadarUpdateCoordinator
 → timestamped PNG files
 → latest.json
 ```

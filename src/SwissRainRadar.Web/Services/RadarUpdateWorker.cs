@@ -43,7 +43,7 @@ public sealed partial class RadarUpdateWorker(
         try
         {
             await using var scope = scopeFactory.CreateAsyncScope();
-            await scope.ServiceProvider.GetRequiredService<RadarUpdateService>().UpdateLatestAsync(cancellationToken);
+            await scope.ServiceProvider.GetRequiredService<RadarUpdateCoordinator>().UpdateLatestAsync(cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
@@ -60,7 +60,7 @@ public sealed partial class RadarUpdateWorker(
         try
         {
             await using var scope = scopeFactory.CreateAsyncScope();
-            await scope.ServiceProvider.GetRequiredService<RadarUpdateService>().BackfillRawAsync(cancellationToken);
+            await scope.ServiceProvider.GetRequiredService<RadarUpdateCoordinator>().BackfillRawAsync(cancellationToken);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {

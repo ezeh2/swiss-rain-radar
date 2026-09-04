@@ -92,7 +92,7 @@ Configuration validation prevents intervals shorter than five minutes.
 
 ### Reproducible fixed-time mode
 
-`RadarUpdateService` receives .NET's `TimeProvider` instead of reading the system clock directly. Normally `Program.cs` registers `TimeProvider.System`. When `Radar:FixedReferenceTimeUtc` contains a UTC timestamp, it registers `FixedTimeProvider` instead.
+`RadarUpdateCoordinator` receives .NET's `TimeProvider` instead of reading the system clock directly. Normally `Program.cs` registers `TimeProvider.System`. When `Radar:FixedReferenceTimeUtc` contains a UTC timestamp, it registers `FixedTimeProvider` instead.
 
 The service captures that time once at the start of an update and uses it consistently to:
 
@@ -107,13 +107,13 @@ The committed Development settings fix the time at `2026-08-31T06:30:00Z` and di
 
 ### Polling is not always downloading
 
-Every update checks the STAC catalog, but it does not necessarily download a new HDF5 file. `EnsureRawAssetAsync` first checks whether the file already exists in `IObjectStore`. Only a missing file is downloaded.
+Every update checks the STAC catalog, but it does not necessarily download a new HDF5 file. `RawRadarFileImporter.DownloadRawRadarFilesAsync` first checks whether each file already exists in `IObjectStore`. Only missing files are downloaded.
 
 The application currently uses hourly CombiPrecip windows. Polling every five minutes lets it notice a newly published product promptly, while persistent storage prevents repeated downloads of an already imported product.
 
 ### Update sequence
 
-`UpdateLatestAsync` performs the following work:
+`RadarUpdateCoordinator.UpdateLatestAsync` coordinates the following work:
 
 1. Query STAC items for the reference day and preceding day.
 2. Exclude assets later than the reference time and select the newest eligible CombiPrecip asset.
@@ -125,7 +125,7 @@ The application currently uses hourly CombiPrecip windows. Polling every five mi
 8. Store the timestamped maps.
 9. Replace `maps/latest.json` with a manifest for the browser.
 
-When at least one map variant was generated, the same update also merges a snapshot into `maps/timeline.json`. The timeline contains only prepared PNG variants, is ordered by period end, replaces duplicate timestamps and retains the configured number of days (`Radar:TimelineRetentionDays`, default 14). It does not trigger historical processing or list Blob objects on each browser request.
+When at least one map variant was generated, `MapTimelineFileProcessor` rebuilds `maps/timeline.json` from the retained PNG inventory. The timeline contains only prepared PNG variants, is ordered by period end and retains the configured number of days (`Radar:TimelineRetentionDays`, default 14). It does not trigger historical processing or list Blob objects on each browser request.
 
 The source CPC products are rolling 60-minute totals published more frequently than once per hour. Summing every publication would count the same rain repeatedly, so `SelectNonOverlappingHours` deliberately chooses files one hour apart.
 
