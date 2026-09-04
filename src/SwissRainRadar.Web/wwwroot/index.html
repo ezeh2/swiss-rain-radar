@@ -7,7 +7,7 @@
   <title>Schweizer Regenkarte</title>
   <meta name="description" content="Aktuelle Regensummen für die Schweiz auf Basis offener MeteoSchweiz-Daten.">
   <link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
-  <link rel="stylesheet" href="/css/site.css?v=20260901-3">
+  <link rel="stylesheet" href="/css/site.css?v=20260904-1">
 </head>
 <body>
   <main class="app-shell">
@@ -64,14 +64,15 @@
     </section>
 
     <section class="timeline-panel" aria-labelledby="timeline-label">
-      <div class="timeline-heading">
-        <label class="toolbar-label" id="timeline-label" for="timeline">Zeitpunkt auswählen</label>
-        <output id="timeline-selected" for="timeline">–</output>
-      </div>
-      <input id="timeline" type="range" min="0" max="0" step="300" value="0" disabled>
-      <div class="timeline-limits" aria-hidden="true">
-        <span id="timeline-start">–</span>
-        <span id="timeline-end">–</span>
+      <div class="toolbar-label" id="timeline-label">Zeitpunkt auswählen</div>
+      <div class="timeline-controls">
+        <button class="timeline-button" id="timeline-previous" type="button" aria-label="Vorheriger Zeitpunkt" disabled>
+          <span aria-hidden="true">&#8592;</span>
+        </button>
+        <time id="timeline-selected">–</time>
+        <button class="timeline-button" id="timeline-next" type="button" aria-label="Nächster Zeitpunkt" disabled>
+          <span aria-hidden="true">&#8594;</span>
+        </button>
       </div>
     </section>
 
@@ -82,6 +83,6 @@
   </main>
 
   <script src="/vendor/leaflet/leaflet.js"></script>
-  <script type="module" src="/js/app.js?v=20260901-3"></script>
+  <script type="module" src="/js/app.js?v=20260904-1"></script>
 </body>
 </html>

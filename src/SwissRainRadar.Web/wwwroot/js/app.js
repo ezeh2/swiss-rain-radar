@@ -17,10 +17,9 @@ const statusElement = document.querySelector("#status");
 const loadingElement = document.querySelector("#loading");
 const periodEndElement = document.querySelector("#period-end");
 const periodsElement = document.querySelector("#periods");
-const timelineElement = document.querySelector("#timeline");
 const timelineSelectedElement = document.querySelector("#timeline-selected");
-const timelineStartElement = document.querySelector("#timeline-start");
-const timelineEndElement = document.querySelector("#timeline-end");
+const timelinePreviousElement = document.querySelector("#timeline-previous");
+const timelineNextElement = document.querySelector("#timeline-next");
 
 let manifest;
 let radarLayer;
@@ -111,44 +110,23 @@ function normalizeSnapshots(snapshots, latestSnapshot) {
     .sort((left, right) => Date.parse(left.periodEnd) - Date.parse(right.periodEnd));
 }
 
-function findSnapshotAtOrBefore(epochSeconds) {
-  let result = timelineSnapshots[0];
-  let left = 0;
-  let right = timelineSnapshots.length - 1;
+function updateTimelineControls() {
+  const selectedIndex = timelineSnapshots.findIndex(
+    snapshot => snapshot.periodEnd === selectedSnapshot?.periodEnd);
+  const hasSelection = selectedIndex >= 0;
 
-  while (left <= right) {
-    const middle = Math.floor((left + right) / 2);
-    const candidate = timelineSnapshots[middle];
-    if (Date.parse(candidate.periodEnd) / 1000 <= epochSeconds) {
-      result = candidate;
-      left = middle + 1;
-    } else {
-      right = middle - 1;
-    }
-  }
-
-  return result;
-}
-
-function configureTimeline(requestedEpochSeconds) {
-  const first = timelineSnapshots[0];
-  const last = timelineSnapshots.at(-1);
-  const minimum = Math.floor(Date.parse(first.periodEnd) / 1000);
-  const maximum = Math.floor(Date.parse(last.periodEnd) / 1000);
-
-  timelineElement.min = minimum;
-  timelineElement.max = maximum;
-  timelineElement.step = 5 * 60;
-  timelineElement.disabled = minimum === maximum;
-  timelineElement.value = Math.min(maximum, Math.max(minimum, requestedEpochSeconds ?? maximum));
-  timelineStartElement.textContent = formatTimestamp(minimum * 1000);
-  timelineEndElement.textContent = formatTimestamp(maximum * 1000);
-  timelineSelectedElement.textContent = formatTimestamp(Number(timelineElement.value) * 1000);
+  timelinePreviousElement.disabled = !hasSelection || selectedIndex === 0;
+  timelineNextElement.disabled = !hasSelection || selectedIndex === timelineSnapshots.length - 1;
+  timelineSelectedElement.textContent = hasSelection
+    ? formatTimestamp(selectedSnapshot.periodEnd)
+    : "–";
+  timelineSelectedElement.dateTime = hasSelection ? selectedSnapshot.periodEnd : "";
 }
 
 function selectSnapshot(snapshot) {
   const changed = selectedSnapshot?.periodEnd !== snapshot.periodEnd;
   selectedSnapshot = snapshot;
+  updateTimelineControls();
   renderPeriods();
   periodEndElement.textContent = formatTimestamp(snapshot.periodEnd);
 
@@ -161,16 +139,18 @@ function selectSnapshot(snapshot) {
   if (available && (changed || !radarLayer)) showMap(available);
 }
 
-timelineElement.addEventListener("input", () => {
-  timelineSelectedElement.textContent = formatTimestamp(Number(timelineElement.value) * 1000);
-});
+function moveTimeline(offset) {
+  const selectedIndex = timelineSnapshots.findIndex(
+    snapshot => snapshot.periodEnd === selectedSnapshot?.periodEnd);
+  const nextSnapshot = timelineSnapshots[selectedIndex + offset];
+  if (!nextSnapshot) return;
 
-timelineElement.addEventListener("change", () => {
-  const requestedEpochSeconds = Number(timelineElement.value);
-  const snapshot = findSnapshotAtOrBefore(requestedEpochSeconds);
-  followLatest = requestedEpochSeconds >= Number(timelineElement.max);
-  selectSnapshot(snapshot);
-});
+  followLatest = nextSnapshot === timelineSnapshots.at(-1);
+  selectSnapshot(nextSnapshot);
+}
+
+timelinePreviousElement.addEventListener("click", () => moveTimeline(-1));
+timelineNextElement.addEventListener("click", () => moveTimeline(1));
 
 async function loadLatest() {
   try {
@@ -182,8 +162,8 @@ async function loadLatest() {
 
     const nextManifest = await response.json();
     const timeline = await timelineRequest;
-    const requestedEpochSeconds = selectedSnapshot && !followLatest
-      ? Number(timelineElement.value)
+    const selectedPeriodEnd = selectedSnapshot && !followLatest
+      ? selectedSnapshot.periodEnd
       : undefined;
     manifest = {
       ...nextManifest,
@@ -191,11 +171,10 @@ async function loadLatest() {
     };
     const latestSnapshot = { periodEnd: manifest.periodEnd, maps: manifest.maps };
     timelineSnapshots = normalizeSnapshots(timeline.snapshots ?? [], latestSnapshot);
-    configureTimeline(requestedEpochSeconds);
-
-    const snapshot = followLatest
-      ? latestSnapshot
-      : findSnapshotAtOrBefore(Number(timelineElement.value));
+    const preservedSnapshot = timelineSnapshots.find(snapshot => snapshot.periodEnd === selectedPeriodEnd);
+    const snapshot = followLatest || !preservedSnapshot
+      ? timelineSnapshots.at(-1)
+      : preservedSnapshot;
     selectSnapshot(snapshot);
   } catch (error) {
     console.error(error);

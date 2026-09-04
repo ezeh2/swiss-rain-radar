@@ -249,7 +249,7 @@ The visible map is composed from two principal layers:
 
 The server manifest supplies the geographic bounds. Leaflet stretches the transparent image over those bounds and keeps it aligned while the user zooms or pans. Switching between 1, 3, 6, 12 and 24 hours replaces the image overlay without resetting the viewport.
 
-The full-width timeline below the map spans the oldest through newest catalog timestamp in five-minute increments. While it is dragged, JavaScript changes only the displayed requested time. The browser selects the last prepared snapshot at or before that time and requests its PNG only when the range input emits `change`, normally after the mouse button or touch gesture is released.
+The timeline below the map displays the selected catalog timestamp. Previous and next buttons move directly between prepared snapshots, so a timestamp absent from `timeline.json` cannot be selected.
 
 MeteoSwiss source grids use LV95. `RadarImageRenderer` converts regular output pixels between WGS84 and LV95 while rendering. Leaflet receives ordinary latitude and longitude bounds and handles its browser-map projection internally.
 
